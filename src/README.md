@@ -5,7 +5,7 @@ A super simple FastAPI application that allows students to view and sign up for 
 ## Features
 
 - View all available extracurricular activities
-- Sign up for activities
+- Teachers can sign up and unregister students from activities
 
 ## Getting Started
 
@@ -30,7 +30,11 @@ A super simple FastAPI application that allows students to view and sign up for 
 | Method | Endpoint                                                          | Description                                                         |
 | ------ | ----------------------------------------------------------------- | ------------------------------------------------------------------- |
 | GET    | `/activities`                                                     | Get all activities with their details and current participant count |
-| POST   | `/activities/{activity_name}/signup?email=student@mergington.edu` | Sign up for an activity                                             |
+| POST   | `/auth/login`                                                      | Log in as a teacher                                                 |
+| POST   | `/auth/logout`                                                     | End the current teacher session                                     |
+| GET    | `/auth/me`                                                         | Check the current teacher session                                   |
+| POST   | `/activities/{activity_name}/signup?email=student@mergington.edu` | Sign up a student as a teacher                                      |
+| DELETE | `/activities/{activity_name}/unregister?email=student@mergington.edu` | Unregister a student as a teacher                                |
 
 ## Data Model
 
@@ -47,4 +51,4 @@ The application uses a simple data model with meaningful identifiers:
    - Name
    - Grade level
 
-All data is stored in memory, which means data will be reset when the server restarts.
+Activity data and teacher sessions are stored in memory, which means they will be reset when the server restarts. Teacher credentials are stored in `teachers.json` for this exercise. The demo login is `teacher` / `school123`.
