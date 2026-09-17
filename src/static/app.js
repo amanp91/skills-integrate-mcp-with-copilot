@@ -3,6 +3,22 @@ document.addEventListener("DOMContentLoaded", () => {
   const activitySelect = document.getElementById("activity");
   const signupForm = document.getElementById("signup-form");
   const messageDiv = document.getElementById("message");
+  const signupContainer = document.getElementById("signup-container");
+  const adminStatus = document.getElementById("admin-status");
+  const loginButton = document.getElementById("login-button");
+  const logoutButton = document.getElementById("logout-button");
+  const loginDialog = document.getElementById("login-dialog");
+  const loginForm = document.getElementById("login-form");
+  const loginMessage = document.getElementById("login-message");
+  let isTeacher = false;
+
+  function updateAdminControls(username = "") {
+    isTeacher = Boolean(username);
+    signupContainer.classList.toggle("hidden", !isTeacher);
+    loginButton.classList.toggle("hidden", isTeacher);
+    logoutButton.classList.toggle("hidden", !isTeacher);
+    adminStatus.textContent = isTeacher ? `Teacher: ${username}` : "Student view";
+  }
 
   // Function to fetch activities from API
   async function fetchActivities() {
@@ -12,6 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Clear loading message
       activitiesList.innerHTML = "";
+      activitySelect.innerHTML = '<option value="">-- Select an activity --</option>';
 
       // Populate activities list
       Object.entries(activities).forEach(([name, details]) => {
@@ -24,13 +41,17 @@ document.addEventListener("DOMContentLoaded", () => {
         // Create participants HTML with delete icons instead of bullet points
         const participantsHTML =
           details.participants.length > 0
-            ? `<div class="participants-section">
+              ? `<div class="participants-section">
               <h5>Participants:</h5>
               <ul class="participants-list">
                 ${details.participants
                   .map(
                     (email) =>
-                      `<li><span class="participant-email">${email}</span><button class="delete-btn" data-activity="${name}" data-email="${email}">❌</button></li>`
+                      `<li><span class="participant-email">${email}</span>${
+                        isTeacher
+                          ? `<button class="delete-btn" data-activity="${name}" data-email="${email}" aria-label="Unregister ${email}">Remove</button>`
+                          : ""
+                      }</li>`
                   )
                   .join("")}
               </ul>
@@ -66,6 +87,59 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("Error fetching activities:", error);
     }
   }
+
+  async function checkTeacherSession() {
+    try {
+      const response = await fetch("/auth/me");
+      if (response.ok) {
+        const teacher = await response.json();
+        updateAdminControls(teacher.username);
+      }
+    } catch (error) {
+      console.error("Error checking teacher session:", error);
+    }
+  }
+
+  loginButton.addEventListener("click", () => {
+    loginMessage.classList.add("hidden");
+    loginForm.reset();
+    loginDialog.showModal();
+  });
+
+  document.getElementById("cancel-login").addEventListener("click", () => {
+    loginDialog.close();
+  });
+
+  loginForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    loginMessage.classList.add("hidden");
+
+    const response = await fetch("/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: document.getElementById("username").value,
+        password: document.getElementById("password").value,
+      }),
+    });
+
+    if (response.ok) {
+      const teacher = await response.json();
+      updateAdminControls(teacher.username);
+      loginDialog.close();
+      fetchActivities();
+    } else {
+      const result = await response.json();
+      loginMessage.textContent = result.detail || "Unable to log in";
+      loginMessage.classList.remove("hidden");
+    }
+  });
+
+  logoutButton.addEventListener("click", async () => {
+    await fetch("/auth/logout", { method: "POST" });
+    updateAdminControls();
+    fetchActivities();
+  });
 
   // Handle unregister functionality
   async function handleUnregister(event) {
@@ -156,5 +230,5 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // Initialize app
-  fetchActivities();
+  checkTeacherSession().then(fetchActivities);
 });
